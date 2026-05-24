@@ -10,6 +10,7 @@ MetaTrader 5  | MQL5 indicators, EAs, compiled tools
 TradingView   | Pine Script overlays, session tools, PO3/IPDA visuals
 Automation    | GitHub workflows, AI-assisted coding, documentation
 Research      | ICT concepts, IFVG models, macros, killzones, BTCUSD testing
+Community     | Discord servers for trading workflow, tools and private research
 ```
 
 ## Current Focus
@@ -18,6 +19,18 @@ Research      | ICT concepts, IFVG models, macros, killzones, BTCUSD testing
 - Creating MetaTrader 5 and TradingView versions of the same concepts.
 - Keeping source code private while publishing clean project documentation.
 - Turning repeatable trading ideas into testable indicators, EAs and workflows.
+- Building private Discord communities around trading structure, execution process and tool development.
+
+## Discord Communities
+
+I also manage two private Discord servers connected to my trading and automation work.
+
+| Community | Focus | Status |
+|---|---|---|
+| **Trading Research Server** | ICT concepts, BTCUSD study, macros, IPDA, PO3 and execution notes | Private |
+| **Tools & Automation Server** | MetaTrader 5, TradingView, GitHub workflows and AI-assisted development | Private |
+
+These communities are used for structured research, workflow organization, project notes and private collaboration.
 
 ## Public Samples
 
