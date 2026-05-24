@@ -25,10 +25,10 @@ Community     | Discord servers for trading workflow, tools and private research
 
 I also manage two private Discord servers connected to my trading and automation work.
 
-| Community | Focus | Status |
+| Community | Focus | Access |
 |---|---|---|
-| **Trading Research Server** | ICT concepts, BTCUSD study, macros, IPDA, PO3 and execution notes | Private |
-| **Tools & Automation Server** | MetaTrader 5, TradingView, GitHub workflows and AI-assisted development | Private |
+| **Trading Research Server** | ICT concepts, BTCUSD study, macros, IPDA, PO3 and execution notes | [Join Discord](https://discord.gg/C3cEWvVPB) |
+| **Tools & Automation Server** | MetaTrader 5, TradingView, GitHub workflows and AI-assisted development | [Join Discord](https://discord.gg/VDSbgNz6) |
 
 These communities are used for structured research, workflow organization, project notes and private collaboration.
 
