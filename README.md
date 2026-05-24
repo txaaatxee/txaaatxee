@@ -1,62 +1,76 @@
 # txatxe.code
 
-Trading systems, automation and market-structure tools.
+**Trading tools, automation and market-structure systems.**
 
-I build private trading utilities for **MetaTrader 5**, **TradingView**, and workflow automation. My focus is clean execution, practical tools, and repeatable research for ICT-style trading workflows.
-
-## What I Build
-
-| Area | Focus |
-|---|---|
-| MetaTrader 5 | MQL5 indicators, Expert Advisors, session tools, backtest-ready logic |
-| TradingView | Pine Script indicators, visual market-structure tools, session overlays |
-| Automation | GitHub workflows, project versioning, research assistants, repeatable trading tasks |
-| Trading Logic | IPDA ranges, premium/discount, PO3, macros, killzones, IFVG model logic |
-
-## Featured Private Projects
-
-| Project | Platform | Status |
-|---|---|---|
-| **IPDA Premium / Discount Zones** | MT5 + TradingView | Private source |
-| **PO3 HTF Projection** | TradingView | Private source |
-| **BTC Macro IFVG Model 2 EA** | MetaTrader 5 | Private source |
-| **Day Separator 6AM** | MetaTrader 5 | Private source |
-| **Weekly / Daily Separators** | TradingView | Private source |
-| **Time Zone Session Overlay** | TradingView | Private source |
-
-## Current Trading Tool Stack
+I build private tools for **MetaTrader 5**, **TradingView** and AI-assisted trading workflows.  
+My work focuses on clean execution, visual market context, repeatable logic and structured project delivery.
 
 ```text
-MetaTrader 5    MQL5 indicators and EAs
-TradingView     Pine Script visual tools
-GitHub          Private source control and project history
-Automation      AI-assisted project creation, documentation and maintenance
+MetaTrader 5  | MQL5 indicators, EAs, compiled tools
+TradingView   | Pine Script overlays, session tools, PO3/IPDA visuals
+Automation    | GitHub workflows, AI-assisted coding, documentation
+Research      | ICT concepts, IFVG models, macros, killzones, BTCUSD testing
 ```
 
-## Core Concepts I Work With
+## Current Focus
 
-- IPDA 20 / 40 / 60 ranges
-- Premium and discount arrays
-- Daily and weekly separators
-- New York midnight and Madrid 06:00 session logic
-- ICT macros and killzones
-- IFVG Model 2 execution logic
-- PO3 higher-timeframe projections
-- BTCUSD systematic trading experiments
+- Building a private library of ICT-style trading tools.
+- Creating MetaTrader 5 and TradingView versions of the same concepts.
+- Keeping source code private while publishing clean project documentation.
+- Turning repeatable trading ideas into testable indicators, EAs and workflows.
 
-## Operating Principles
+## Public Samples
 
+These are lightweight public examples. Full production tools remain private.
+
+| Project | Platform | Purpose |
+|---|---|---|
+| **Time Zone Session Overlay** | TradingView | Simple session background example |
+| **Weekly / Daily Separators** | TradingView | Calendar separator logic example |
+
+## Private Project Portfolio
+
+| Project | Platform | Description | Source |
+|---|---|---|---|
+| **IPDA Premium / Discount Zones** | MT5 + TradingView | IPDA 20/40/60 ranges with premium and discount zones | Private |
+| **PO3 HTF Projection** | TradingView | Higher-timeframe PO3 candle projection with OHLC context | Private |
+| **BTC Macro IFVG Model 2 EA** | MetaTrader 5 | BTCUSD automation using macros and IFVG Model 2 logic | Private |
+| **Day Separator 6AM** | MetaTrader 5 | Madrid 06:00 / New York midnight daily separator | Private |
+| **Weekly / Daily Separators** | TradingView | Daily, weekly and monthly separators with labels | Private/Public sample |
+| **Time Zone Session Overlay** | TradingView | Configurable session highlight overlay | Private/Public sample |
+
+## Core Concepts
+
+| Concept | How I Use It |
+|---|---|
+| **IPDA** | 20/40/60 dealing ranges, premium/discount context |
+| **PO3** | Higher-timeframe candle projection and live OHLC mapping |
+| **Killzones / Macros** | Time-based execution windows |
+| **IFVG Model 2** | Sweep, displacement and FVG-based execution logic |
+| **NY Midnight / Madrid 06:00** | Daily separator and day-range context |
+| **BTCUSD** | Primary automation and testing market |
+
+## Workflow Standards
+
+- One project per repository.
 - Private source by default.
-- Public profile as portfolio only.
-- Every tool gets its own repository.
-- No mixed projects.
-- Every project includes documentation.
-- Code is tested or compiled before versioning when the platform allows it.
+- Public README as portfolio, not source-code exposure.
+- MT5 tools compiled before versioning when possible.
+- TradingView tools documented for Pine Editor installation.
+- GitHub history kept clean and descriptive.
 
-## Contact
+## Tooling
 
-For access, collaboration, or review requests, contact me directly.
+![MetaTrader 5](https://img.shields.io/badge/MetaTrader%205-MQL5-2f80ed)
+![TradingView](https://img.shields.io/badge/TradingView-Pine%20Script-2962ff)
+![GitHub](https://img.shields.io/badge/GitHub-Version%20Control-181717)
+![Automation](https://img.shields.io/badge/Automation-AI%20Assisted-ff9800)
+
+## Availability
+
+Most trading logic and source code is private.  
+For access, collaboration, code review or custom tool requests, contact me directly.
 
 ---
 
-> Source code for trading tools is private. This profile shows project scope and technical direction without exposing proprietary logic.
+**Public profile = portfolio. Private repos = source code.**
