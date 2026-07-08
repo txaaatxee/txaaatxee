@@ -21,6 +21,7 @@ EA en MQL5 para MetaTrader 5 que opera los **dos modelos únicos de entrada IFVG
 - [[05 - Huecos y decisiones]] — qué no estaba documentado y cómo se resolvió
 - [[06 - Registro de pruebas]] — log de tests y resultados
 - [[07 - Fuentes]] — páginas de Notion y ubicación del código
+- [[08 - Variante agresiva]] — réplica con min range 125 (más trades, más drawdown)
 
 ## Código
 
