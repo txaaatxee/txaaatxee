@@ -1,0 +1,664 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IFVG Backtest Lab</title>
+<style>
+  :root, :root[data-theme="light"] {
+    --page:#f9f9f7; --surface:#fcfcfb; --ink:#0b0b0b; --ink2:#52514e; --muted:#898781;
+    --grid:#e1e0d9; --baseline:#c3c2b7; --border:rgba(11,11,11,.10);
+    --accent:#2a78d6; --accent-soft:rgba(42,120,214,.10);
+    --good:#006300; --good-mark:#0ca30c; --crit:#d03b3b;
+    --field:#ffffff;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --page:#0d0d0d; --surface:#1a1a19; --ink:#ffffff; --ink2:#c3c2b7; --muted:#898781;
+      --grid:#2c2c2a; --baseline:#383835; --border:rgba(255,255,255,.10);
+      --accent:#3987e5; --accent-soft:rgba(57,135,229,.14);
+      --good:#0ca30c; --good-mark:#0ca30c; --crit:#e66767;
+      --field:#232322;
+    }
+  }
+  :root[data-theme="dark"] {
+    --page:#0d0d0d; --surface:#1a1a19; --ink:#ffffff; --ink2:#c3c2b7; --muted:#898781;
+    --grid:#2c2c2a; --baseline:#383835; --border:rgba(255,255,255,.10);
+    --accent:#3987e5; --accent-soft:rgba(57,135,229,.14);
+    --good:#0ca30c; --good-mark:#0ca30c; --crit:#e66767;
+    --field:#232322;
+  }
+  * { box-sizing:border-box; }
+  body {
+    margin:0; background:var(--page); color:var(--ink);
+    font:14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  .app { display:grid; grid-template-columns:300px 1fr; gap:20px; max-width:1280px; margin:0 auto; padding:20px; }
+  @media (max-width: 900px){ .app { grid-template-columns:1fr; } .panel { position:static; max-height:none; } }
+
+  /* ---- panel de configuracion ---- */
+  .panel {
+    background:var(--surface); border:1px solid var(--border); border-radius:8px;
+    padding:16px; align-self:start; position:sticky; top:16px;
+    max-height:calc(100vh - 32px); overflow-y:auto;
+  }
+  .panel h2 { font-size:13px; margin:18px 0 8px; text-transform:uppercase; letter-spacing:.08em; color:var(--ink2); font-weight:600; }
+  .panel h2:first-child { margin-top:0; }
+  .row { display:flex; align-items:center; justify-content:space-between; gap:8px; margin:6px 0; }
+  .row label { color:var(--ink2); flex:1; font-size:13px; }
+  .row input[type="number"], .row input[type="text"], .row select {
+    width:92px; padding:4px 6px; border:1px solid var(--baseline); border-radius:4px;
+    background:var(--field); color:var(--ink); font:inherit; font-variant-numeric:tabular-nums; text-align:right;
+  }
+  .row select { text-align:left; }
+  .row input[type="checkbox"] { width:16px; height:16px; accent-color:var(--accent); }
+  input:focus-visible, select:focus-visible, button:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
+  .presets { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:4px; }
+  .presets button {
+    font-size:12px; padding:4px 10px; border-radius:99px; border:1px solid var(--baseline);
+    background:var(--surface); color:var(--ink2); cursor:pointer;
+  }
+  .presets button:hover { border-color:var(--accent); color:var(--accent); }
+
+  /* ---- cabecera / acciones ---- */
+  header { grid-column:1 / -1; display:flex; align-items:baseline; gap:14px; flex-wrap:wrap; }
+  header h1 { font-size:20px; margin:0; font-weight:700; letter-spacing:-.01em; }
+  header .sub { color:var(--muted); font-size:13px; }
+  .actions { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:14px; }
+  .btn {
+    padding:8px 16px; border-radius:6px; border:1px solid var(--baseline);
+    background:var(--surface); color:var(--ink); font:inherit; cursor:pointer;
+  }
+  .btn:hover { border-color:var(--accent); }
+  .btn.primary { background:var(--accent); border-color:var(--accent); color:#fff; font-weight:600; }
+  .btn.primary:hover { filter:brightness(1.08); }
+  .datastate { font-size:13px; color:var(--muted); }
+  .datastate strong { color:var(--ink2); }
+
+  /* ---- tiles ---- */
+  .tiles { display:grid; grid-template-columns:repeat(auto-fit, minmax(150px,1fr)); gap:12px; margin-bottom:16px; }
+  .tile { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:12px 14px; }
+  .tile .k { font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); }
+  .tile .v { font-size:24px; font-weight:700; margin-top:2px; letter-spacing:-.01em; }
+  .tile .v.pos { color:var(--good); }
+  .tile .v.neg { color:var(--crit); }
+  .tile .s { font-size:12px; color:var(--ink2); }
+
+  /* ---- chart ---- */
+  .card { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:14px; margin-bottom:16px; }
+  .card h3 { margin:0 0 10px; font-size:13px; text-transform:uppercase; letter-spacing:.08em; color:var(--ink2); font-weight:600; }
+  #chartwrap { position:relative; }
+  #tooltip {
+    position:absolute; pointer-events:none; display:none; z-index:2;
+    background:var(--surface); border:1px solid var(--baseline); border-radius:6px;
+    padding:6px 10px; font-size:12px; box-shadow:0 2px 8px rgba(0,0,0,.15);
+    font-variant-numeric:tabular-nums; white-space:nowrap;
+  }
+  #tooltip .tv { font-weight:700; }
+
+  /* ---- tablas ---- */
+  .tscroll { overflow-x:auto; max-height:420px; overflow-y:auto; }
+  table { border-collapse:collapse; width:100%; font-variant-numeric:tabular-nums; font-size:13px; }
+  th { text-align:right; font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted);
+       font-weight:600; padding:6px 10px; border-bottom:1px solid var(--baseline); position:sticky; top:0; background:var(--surface); }
+  th:first-child, td:first-child { text-align:left; }
+  td { padding:5px 10px; border-bottom:1px solid var(--grid); text-align:right; color:var(--ink2); }
+  td.pos { color:var(--good); } td.neg { color:var(--crit); }
+  td .chip { display:inline-block; padding:1px 8px; border-radius:99px; font-size:11px; border:1px solid var(--baseline); color:var(--ink2); }
+  .note { font-size:12px; color:var(--muted); margin-top:8px; }
+  @media (prefers-reduced-motion: reduce){ * { transition:none !important; } }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <header>
+    <h1>IFVG Backtest Lab</h1>
+    <span class="sub">Modelo 1 (M15&rarr;M5&rarr;IFVG) &middot; Modelo 2 (sweep&rarr;displacement&rarr;IFVG) &middot; motor r&eacute;plica del EA</span>
+  </header>
+
+  <aside class="panel">
+    <h2>Presets</h2>
+    <div class="presets">
+      <button type="button" onclick="applyPreset('reco')">Recomendado 175</button>
+      <button type="button" onclick="applyPreset('agg')">Agresivo 125</button>
+      <button type="button" onclick="applyPreset('base')">Baseline 100/75</button>
+    </div>
+
+    <h2>Modelos</h2>
+    <div class="row"><label for="useM1">Modelo 1 (M15&rarr;M5&rarr;IFVG)</label><input type="checkbox" id="useM1" checked></div>
+    <div class="row"><label for="useM2">Modelo 2 (sweep&rarr;disp&rarr;IFVG)</label><input type="checkbox" id="useM2" checked></div>
+
+    <h2>General</h2>
+    <div class="row"><label for="spread">Spread (puntos)</label><input type="number" id="spread" value="3000" step="100"></div>
+    <div class="row"><label for="pointSize">Tama&ntilde;o del punto (precio)</label><input type="number" id="pointSize" value="1" step="0.01"></div>
+    <div class="row"><label for="vpp">Valor punto / lote ($)</label><input type="number" id="vpp" value="1" step="0.001"></div>
+    <div class="row"><label for="maxPos">M&aacute;x. posiciones</label><input type="number" id="maxPos" value="10" step="1"></div>
+
+    <h2>Modelo 1</h2>
+    <div class="row"><label for="m1Swing">Swing bars (fractal)</label><input type="number" id="m1Swing" value="3" step="1"></div>
+    <div class="row"><label for="m1Look">Lookback bias M15</label><input type="number" id="m1Look" value="40" step="1"></div>
+    <div class="row"><label for="m1FvgMin">FVG m&iacute;n. (puntos)</label><input type="number" id="m1FvgMin" value="10" step="1"></div>
+    <div class="row"><label for="m1Exp">Expiraci&oacute;n zona (M5)</label><input type="number" id="m1Exp" value="120" step="1"></div>
+
+    <h2>Modelo 2</h2>
+    <div class="row"><label for="m2SweepLook">Sweep lookback</label><input type="number" id="m2SweepLook" value="30" step="1"></div>
+    <div class="row"><label for="m2Window">Ventana sweep</label><input type="number" id="m2Window" value="15" step="1"></div>
+    <div class="row"><label for="m2Disp">Factor displacement</label><input type="number" id="m2Disp" value="1.8" step="0.1"></div>
+    <div class="row"><label for="m2AvgBody">Barras cuerpo medio</label><input type="number" id="m2AvgBody" value="20" step="1"></div>
+    <div class="row"><label for="m2FvgMin">FVG m&iacute;n. (puntos)</label><input type="number" id="m2FvgMin" value="5" step="1"></div>
+    <div class="row"><label for="m2MinRange">Min range (puntos)</label><input type="number" id="m2MinRange" value="175" step="5"></div>
+    <div class="row"><label for="m2RangeBars">Barras del rango</label><input type="number" id="m2RangeBars" value="15" step="1"></div>
+    <div class="row"><label for="m2Exp">Expiraci&oacute;n zona (M1)</label><input type="number" id="m2Exp" value="90" step="1"></div>
+
+    <h2>Gesti&oacute;n</h2>
+    <div class="row"><label for="initBal">Balance inicial ($)</label><input type="number" id="initBal" value="400" step="50"></div>
+    <div class="row"><label for="baseLot">Lote base</label><input type="number" id="baseLot" value="0.03" step="0.01"></div>
+    <div class="row"><label for="lotStep">+Lotes por $1000</label><input type="number" id="lotStep" value="0.10" step="0.01"></div>
+    <div class="row"><label for="maxLot">Lote m&aacute;ximo</label><input type="number" id="maxLot" value="5" step="0.1"></div>
+    <div class="row"><label for="slPts">Stop loss (puntos)</label><input type="number" id="slPts" value="150" step="5"></div>
+    <div class="row"><label for="maxLosing">M&aacute;x. abiertas en negativo</label><input type="number" id="maxLosing" value="3" step="1"></div>
+    <div class="row"><label for="maxRisk">Riesgo abierto m&aacute;x. (%)</label><input type="number" id="maxRisk" value="50" step="5"></div>
+
+    <h2>Salida</h2>
+    <div class="row"><label for="exitMode">Modo</label>
+      <select id="exitMode"><option value="trail" selected>Trailing</option><option value="rr">TP fijo (RR)</option></select></div>
+    <div class="row"><label for="trailStart">Trailing start</label><input type="number" id="trailStart" value="75" step="5"></div>
+    <div class="row"><label for="trailDist">Trailing distance</label><input type="number" id="trailDist" value="50" step="5"></div>
+    <div class="row"><label for="fixedRR">RR fijo</label><input type="number" id="fixedRR" value="2.5" step="0.1"></div>
+
+    <h2>Killzones (opcional)</h2>
+    <div class="row"><label for="useKZ">Activar filtro horario</label><input type="checkbox" id="useKZ"></div>
+    <div class="row"><label for="kz1s">KZ1 inicio</label><input type="text" id="kz1s" value="08:00"></div>
+    <div class="row"><label for="kz1e">KZ1 fin</label><input type="text" id="kz1e" value="11:00"></div>
+    <div class="row"><label for="kz2s">KZ2 inicio</label><input type="text" id="kz2s" value="13:30"></div>
+    <div class="row"><label for="kz2e">KZ2 fin</label><input type="text" id="kz2e" value="16:00"></div>
+  </aside>
+
+  <main>
+    <div class="actions">
+      <button class="btn primary" type="button" id="runBtn" onclick="run()">Ejecutar backtest</button>
+      <button class="btn" type="button" onclick="document.getElementById('csvfile').click()">Cargar CSV M1&hellip;</button>
+      <input type="file" id="csvfile" accept=".csv,.txt" style="display:none" onchange="loadCsv(this.files[0])">
+      <button class="btn" type="button" onclick="genDemo()">Datos demo (30 d&iacute;as)</button>
+      <button class="btn" type="button" id="expJson" onclick="exportJson()" disabled>Exportar summary JSON</button>
+      <button class="btn" type="button" id="expCsv" onclick="exportTradesCsv()" disabled>Exportar trades CSV</button>
+      <span class="datastate" id="datastate">Sin datos &mdash; carga un CSV M1 exportado de MT5 o genera datos demo.</span>
+    </div>
+
+    <div class="tiles" id="tiles" hidden>
+      <div class="tile"><div class="k">PnL neto</div><div class="v" id="tPnl">&ndash;</div><div class="s" id="tRet"></div></div>
+      <div class="tile"><div class="k">Win rate</div><div class="v" id="tWr">&ndash;</div><div class="s" id="tWl"></div></div>
+      <div class="tile"><div class="k">Trades</div><div class="v" id="tTrades">&ndash;</div><div class="s" id="tByModel"></div></div>
+      <div class="tile"><div class="k">Max drawdown</div><div class="v" id="tDd">&ndash;</div><div class="s" id="tMinBal"></div></div>
+      <div class="tile"><div class="k">Balance final</div><div class="v" id="tBal">&ndash;</div><div class="s" id="tMaxLot"></div></div>
+    </div>
+
+    <div class="card" id="chartcard" hidden>
+      <h3>Curva de balance realizado</h3>
+      <div id="chartwrap">
+        <svg id="chart" width="100%" height="260" role="img" aria-label="Curva de balance del backtest"></svg>
+        <div id="tooltip"></div>
+      </div>
+    </div>
+
+    <div class="card" id="metricscard" hidden>
+      <h3>M&eacute;tricas</h3>
+      <div class="tscroll"><table id="metrics"></table></div>
+    </div>
+
+    <div class="card" id="tradescard" hidden>
+      <h3>Operaciones</h3>
+      <div class="tscroll"><table id="tradestable"></table></div>
+      <p class="note" id="tradesnote"></p>
+    </div>
+
+    <p class="note">Motor r&eacute;plica del EA <code>IFVG_DualModel_EA.mq5</code>. Aproximaci&oacute;n por barras M1 (equivalente al modo OHLC de MT5): dentro de una barra el SL se eval&uacute;a antes que el TP y el trailing se actualiza al cierre de barra &mdash; para la validaci&oacute;n final usa el Strategy Tester con ticks reales. CSV aceptado: columnas fecha, hora, open, high, low, close (separador coma, tab o punto y coma; formato exportaci&oacute;n MT5).</p>
+  </main>
+</div>
+
+<script>
+"use strict";
+let BARS = null;       // [{t,o,h,l,c}] M1, t = apertura en ms
+let LAST = null;       // ultimo resultado
+
+// ---------- presets ----------
+function applyPreset(p){
+  if(p === 'reco'){ setv('m2MinRange',175); setv('trailStart',75); setv('trailDist',50); setv('maxLosing',3); }
+  if(p === 'agg') { setv('m2MinRange',125); setv('trailStart',75); setv('trailDist',50); setv('maxLosing',3); }
+  if(p === 'base'){ setv('m2MinRange',0);   setv('trailStart',100); setv('trailDist',75); setv('maxLosing',3); }
+}
+function setv(id,v){ document.getElementById(id).value = v; }
+function num(id){ return parseFloat(document.getElementById(id).value); }
+function chk(id){ return document.getElementById(id).checked; }
+function sval(id){ return document.getElementById(id).value; }
+
+// ---------- datos ----------
+function loadCsv(file){
+  if(!file) return;
+  const r = new FileReader();
+  r.onload = () => {
+    try {
+      BARS = parseCsv(r.result);
+      dataState('CSV cargado: <strong>' + BARS.length.toLocaleString('es') + '</strong> velas M1 (' +
+        fmtDate(BARS[0].t) + ' &rarr; ' + fmtDate(BARS[BARS.length-1].t) + ')');
+    } catch(e){ dataState('Error al leer el CSV: ' + e.message); BARS = null; }
+  };
+  r.readAsText(file);
+}
+function parseCsv(text){
+  const lines = text.split(/\r?\n/).filter(l => l.trim().length);
+  if(!lines.length) throw new Error('archivo vacio');
+  const sep = lines[0].includes('\t') ? '\t' : (lines[0].includes(';') ? ';' : ',');
+  let start = 0;
+  if(/[a-zA-Z<]/.test(lines[0])) start = 1; // cabecera
+  const out = [];
+  for(let i=start;i<lines.length;i++){
+    const p = lines[i].split(sep).map(s => s.trim());
+    if(p.length < 5) continue;
+    let oIdx;
+    let dateStr, timeStr;
+    if(p[0].includes(' ') && p[0].includes(':')){ const dt = p[0].split(' '); dateStr = dt[0]; timeStr = dt[1]; oIdx = 1; }
+    else { dateStr = p[0]; timeStr = p[1].includes(':') ? p[1] : '00:00'; oIdx = p[1].includes(':') ? 2 : 1; }
+    const d = dateStr.replace(/\./g,'-').split('-');
+    const tm = timeStr.split(':');
+    if(d.length < 3) continue;
+    let y,mo,da;
+    if(d[0].length === 4){ y=+d[0]; mo=+d[1]; da=+d[2]; } else { da=+d[0]; mo=+d[1]; y=+d[2]; }
+    const t = Date.UTC(y, mo-1, da, +tm[0]||0, +tm[1]||0);
+    const o = parseFloat(p[oIdx]), h = parseFloat(p[oIdx+1]), l = parseFloat(p[oIdx+2]), c = parseFloat(p[oIdx+3]);
+    if([o,h,l,c].some(isNaN) || !isFinite(t)) continue;
+    out.push({t,o,h,l,c});
+  }
+  if(out.length < 500) throw new Error('menos de 500 velas validas');
+  out.sort((a,b) => a.t - b.t);
+  return out;
+}
+function genDemo(){
+  const rng = mulberry32(20260708);
+  const gauss = () => { let u=0,v=0; while(!u)u=rng(); while(!v)v=rng(); return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v); };
+  const n = 43200; // 30 dias M1
+  const t0 = Date.UTC(2026,5,8); // 2026-06-08
+  let price = 100000, vol = 0.0006;
+  const out = [];
+  for(let i=0;i<n;i++){
+    vol = Math.max(0.0002, Math.min(0.002, vol + gauss()*0.00004));
+    const o = price;
+    const ret = gauss()*vol;
+    let c = o*(1+ret);
+    const wick = Math.abs(gauss())*vol*0.6;
+    const h = Math.max(o,c)*(1+wick);
+    const l = Math.min(o,c)*(1-Math.abs(gauss())*vol*0.6);
+    out.push({t:t0+i*60000, o, h, l, c});
+    price = c;
+  }
+  BARS = out;
+  dataState('Datos demo: <strong>' + n.toLocaleString('es') + '</strong> velas M1 sint&eacute;ticas (paseo aleatorio BTC-like). Solo para probar el flujo, no para validar el modelo.');
+}
+function mulberry32(a){ return function(){ a|=0; a=a+0x6D2B79F5|0; let t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
+function dataState(html){ document.getElementById('datastate').innerHTML = html; }
+function fmtDate(ms){ const d = new Date(ms); return d.toISOString().slice(0,16).replace('T',' '); }
+function fmt(x,dec){ return x.toLocaleString('es',{minimumFractionDigits:dec===undefined?2:dec, maximumFractionDigits:dec===undefined?2:dec}); }
+
+// ---------- resample ----------
+function resample(bars, min){
+  const ms = min*60000, out = [];
+  let cur = null;
+  for(const b of bars){
+    const bucket = Math.floor(b.t/ms)*ms;
+    if(!cur || cur.t !== bucket){
+      if(cur) out.push(cur);
+      cur = {t:bucket, end:bucket+ms, o:b.o, h:b.h, l:b.l, c:b.c};
+    } else { cur.h = Math.max(cur.h,b.h); cur.l = Math.min(cur.l,b.l); cur.c = b.c; cur.end = bucket+ms; }
+  }
+  if(cur) out.push(cur);
+  return out;
+}
+
+// ---------- motor ----------
+function run(){
+  if(!BARS){ dataState('<strong>Primero carga datos</strong> (CSV M1 o demo).'); return; }
+  const P = {
+    useM1:chk('useM1'), useM2:chk('useM2'),
+    spread:num('spread'), point:num('pointSize'), vpp:num('vpp'), maxPos:num('maxPos'),
+    m1Swing:num('m1Swing')|0, m1Look:num('m1Look')|0, m1FvgMin:num('m1FvgMin'), m1Exp:num('m1Exp')|0,
+    m2SweepLook:num('m2SweepLook')|0, m2Window:num('m2Window')|0, m2Disp:num('m2Disp'),
+    m2AvgBody:num('m2AvgBody')|0, m2FvgMin:num('m2FvgMin'), m2MinRange:num('m2MinRange'), m2RangeBars:num('m2RangeBars')|0, m2Exp:num('m2Exp')|0,
+    initBal:num('initBal'), baseLot:num('baseLot'), lotStep:num('lotStep'), maxLot:num('maxLot'),
+    slPts:num('slPts'), maxLosing:num('maxLosing')|0, maxRisk:num('maxRisk'),
+    exitMode:sval('exitMode'), trailStart:num('trailStart'), trailDist:num('trailDist'), fixedRR:num('fixedRR'),
+    useKZ:chk('useKZ'), kz:[[sval('kz1s'),sval('kz1e')],[sval('kz2s'),sval('kz2e')]].map(w => w.map(parseHHMM))
+  };
+  const t0 = performance.now();
+  const R = backtest(BARS, P);
+  R.ms = performance.now() - t0;
+  LAST = {R, P};
+  render(R, P);
+}
+function parseHHMM(s){ const p = String(s).split(':'); if(p.length!==2) return -1; return (+p[0])*60 + (+p[1]); }
+function inKZ(P, tms){ const d = new Date(tms); const m = d.getUTCHours()*60 + d.getUTCMinutes();
+  return P.kz.some(([s,e]) => s>=0 && e>=0 && (s<=e ? (m>=s && m<e) : (m>=s || m<e))); }
+
+function backtest(bars, P){
+  const pt = P.point, spread = P.spread*pt;
+  const m5 = resample(bars,5), m15 = resample(bars,15);
+  let m5p = 0, m15p = 0;                 // punteros a la primera M5/M15 no cerrada
+  const fvg1 = [], fvg2 = [];            // zonas por modelo
+  let sweepDir = 0, sweepIdx = -1;
+  const pos = [], trades = [];
+  let bal = P.initBal, peak = bal, minBal = bal, maxDD = 0, maxLotUsed = 0;
+  const equity = [{t:bars[0].t, bal}];
+
+  const lotSize = () => {
+    let lot = P.baseLot;
+    const prof = bal - P.initBal;
+    if(prof > 0) lot += P.lotStep*Math.floor(prof/1000);
+    lot = Math.floor(lot/0.01)*0.01;
+    return Math.max(0.01, Math.min(P.maxLot, lot));
+  };
+  const closePos = (p, price, reason, tms) => {
+    const pnl = (p.dir>0 ? price-p.entry : p.entry-price)/pt * P.vpp * p.lot;
+    bal += pnl;
+    trades.push({model:p.model, dir:p.dir, tIn:p.tIn, tOut:tms, entry:p.entry, exit:price, lot:p.lot, pnl, reason});
+    equity.push({t:tms, bal});
+    if(bal < minBal) minBal = bal;
+    if(bal > peak) peak = bal;
+    if(peak - bal > maxDD) maxDD = peak - bal;
+  };
+
+  for(let i=1;i<bars.length;i++){
+    const b = bars[i], bEnd = b.t + 60000;
+
+    // 1) gestion de posiciones (con la barra que acaba de cerrar)
+    for(let k=pos.length-1;k>=0;k--){
+      const p = pos[k];
+      let exited = false;
+      if(p.dir>0){
+        if(b.l <= p.sl){ closePos(p, p.sl, p.sl >= p.entry ? 'trailing' : 'SL', bEnd); pos.splice(k,1); exited = true; }
+        else if(P.exitMode==='rr' && p.tp>0 && b.h >= p.tp){ closePos(p, p.tp, 'TP', bEnd); pos.splice(k,1); exited = true; }
+      } else {
+        if(b.h >= p.sl){ closePos(p, p.sl, p.sl <= p.entry ? 'trailing' : 'SL', bEnd); pos.splice(k,1); exited = true; }
+        else if(P.exitMode==='rr' && p.tp>0 && b.l <= p.tp){ closePos(p, p.tp, 'TP', bEnd); pos.splice(k,1); exited = true; }
+      }
+      if(!exited && P.exitMode==='trail'){
+        if(p.dir>0){
+          const profPts = (b.c - p.entry)/pt;
+          if(profPts >= P.trailStart){ const ns = b.c - P.trailDist*pt; if(ns > p.sl) p.sl = ns; }
+        } else {
+          const profPts = (p.entry - b.c)/pt;
+          if(profPts >= P.trailStart){ const ns = b.c + P.trailDist*pt; if(ns < p.sl) p.sl = ns; }
+        }
+      }
+    }
+
+    // 2) entradas por retest de zonas armadas (antes de detectar con esta barra)
+    const losing = pos.filter(p => ((p.dir>0 ? b.o-p.entry : p.entry-b.o)) < 0).length;
+    const tryEnter = (z) => {
+      if(pos.length >= P.maxPos || losing >= P.maxLosing) return false;
+      if(P.useKZ && !inKZ(P, b.t)) return false;
+      const lot = lotSize();
+      // riesgo abierto
+      let risk = P.slPts*pt/pt * P.vpp * lot;
+      for(const p of pos) risk += Math.abs(p.entry-p.sl)/pt * P.vpp * p.lot;
+      if(risk > bal*P.maxRisk/100) return false;
+      let fill = Math.min(Math.max(b.o, z.bottom), z.top); // entra por el borde mas cercano al open
+      let entry, sl, tp = 0;
+      if(z.dir>0){ entry = fill + spread; sl = entry - P.slPts*pt; if(P.exitMode==='rr') tp = entry + P.slPts*P.fixedRR*pt; }
+      else       { entry = fill;          sl = entry + P.slPts*pt; if(P.exitMode==='rr') tp = entry - P.slPts*P.fixedRR*pt; }
+      pos.push({dir:z.dir, entry, sl, tp, lot, model:z.model, tIn:b.t});
+      if(lot > maxLotUsed) maxLotUsed = lot;
+      return true;
+    };
+    const scanZones = (arr) => {
+      for(const z of arr){
+        if(!z.armed || z.traded || b.t < z.invEnd) continue;
+        if(b.l <= z.top && b.h >= z.bottom){ if(tryEnter(z)) z.traded = true; }
+      }
+    };
+    scanZones(fvg1); scanZones(fvg2);
+
+    // 3) cierres de M5 -> Modelo 1
+    if(P.useM1){
+      while(m5p < m5.length && m5[m5p].end <= bEnd){
+        const k = m5p; m5p++;
+        while(m15p < m15.length && m15[m15p].end <= m5[k].end) m15p++;
+        if(k < 3 || m15p < P.m1Look+P.m1Swing+2) continue;
+        detectFvg(fvg1, m5, k, P.m1FvgMin*pt, 1);
+        expire(fvg1, k, P.m1Exp);
+        const bias = m15Bias(m15, m15p-1, P);
+        for(const z of fvg1){
+          if(z.inverted || z.traded) continue;
+          const c = m5[k].c;
+          const inv = z.bull ? (c < z.bottom) : (c > z.top);
+          if(!inv) continue;
+          z.inverted = true; z.invEnd = m5[k].end;
+          if(bias>0 && !z.bull){ z.armed = true; z.dir = 1; }
+          else if(bias<0 && z.bull){ z.armed = true; z.dir = -1; }
+        }
+      }
+    }
+
+    // 4) Modelo 2 con la barra M1 que acaba de cerrar
+    if(P.useM2 && i > Math.max(P.m2SweepLook+2, P.m2AvgBody+2, P.m2RangeBars+2)){
+      detectFvg(fvg2, bars, i, P.m2FvgMin*pt, 2);
+      expire(fvg2, i, P.m2Exp);
+      // filtro de rango
+      let hi=-Infinity, lo=Infinity;
+      for(let j=i-P.m2RangeBars+1;j<=i;j++){ if(bars[j].h>hi)hi=bars[j].h; if(bars[j].l<lo)lo=bars[j].l; }
+      if((hi-lo)/pt < P.m2MinRange){ sweepDir = 0; }
+      else {
+        // sweep
+        let ph=-Infinity, pl=Infinity;
+        for(let j=i-P.m2SweepLook;j<=i-1;j++){ if(bars[j].h>ph)ph=bars[j].h; if(bars[j].l<pl)pl=bars[j].l; }
+        if(b.h > ph && b.c < ph){ sweepDir = -1; sweepIdx = i; }
+        else if(b.l < pl && b.c > pl){ sweepDir = 1; sweepIdx = i; }
+        if(sweepDir !== 0 && i - sweepIdx <= P.m2Window){
+          // displacement
+          const body = Math.abs(b.c-b.o);
+          let sum = 0; for(let j=i-P.m2AvgBody;j<=i-1;j++) sum += Math.abs(bars[j].c-bars[j].o);
+          const avg = sum/P.m2AvgBody;
+          const rightDir = sweepDir>0 ? b.c>b.o : b.c<b.o;
+          if(avg>0 && body >= P.m2Disp*avg && rightDir){
+            for(const z of fvg2){
+              if(z.inverted || z.traded) continue;
+              const wantBearish = sweepDir>0;
+              if(z.bull === wantBearish) continue;
+              const inv = z.bull ? (b.c < z.bottom) : (b.c > z.top);
+              if(!inv) continue;
+              z.inverted = true; z.invEnd = bEnd; z.armed = true; z.dir = sweepDir;
+              sweepDir = 0;
+              break;
+            }
+          }
+        } else if(sweepDir !== 0 && i - sweepIdx > P.m2Window){ sweepDir = 0; }
+      }
+    }
+  }
+
+  // metricas
+  const wins = trades.filter(t => t.pnl >= 0), losses = trades.filter(t => t.pnl < 0);
+  const gp = wins.reduce((s,t)=>s+t.pnl,0), gl = losses.reduce((s,t)=>s+t.pnl,0);
+  return {
+    trades, equity, open:pos.length,
+    n:trades.length, wins:wins.length, losses:losses.length,
+    wr: trades.length ? wins.length/trades.length*100 : 0,
+    gp, gl, pnl: gp+gl, bal, ret: (bal-P.initBal)/P.initBal*100,
+    minBal, maxDD, maxLotUsed,
+    exTrail: trades.filter(t=>t.reason==='trailing').length,
+    exSL: trades.filter(t=>t.reason==='SL').length,
+    exTP: trades.filter(t=>t.reason==='TP').length,
+    byModel: {m1: trades.filter(t=>t.model===1).length, m2: trades.filter(t=>t.model===2).length}
+  };
+}
+function detectFvg(arr, series, k, minSize, model){
+  const b1 = series[k], b3 = series[k-2], center = series[k-1];
+  if(!b3) return;
+  if(arr.some(z => z.ct === center.t)) return;
+  if(b1.l - b3.h >= minSize) arr.push({ct:center.t, ci:k-1, top:b1.l, bottom:b3.h, bull:true,  inverted:false, invEnd:0, armed:false, traded:false, dir:0, model});
+  else if(b3.l - b1.h >= minSize) arr.push({ct:center.t, ci:k-1, top:b3.l, bottom:b1.h, bull:false, inverted:false, invEnd:0, armed:false, traded:false, dir:0, model});
+}
+function expire(arr, k, maxBars){
+  for(let j=arr.length-1;j>=0;j--) if(k - arr[j].ci > maxBars || arr[j].traded) arr.splice(j,1);
+}
+function m15Bias(m15, last, P){
+  let sh = 0, sl = 0;
+  const kk = P.m1Swing;
+  for(let d=kk+1; d<=P.m1Look && (!sh || !sl); d++){
+    const idx = last - d;
+    if(idx - kk < 0) break;
+    if(!sh){ let ok = true; for(let j=1;j<=kk;j++){ if(m15[idx-j].h >= m15[idx].h || m15[idx+j].h >= m15[idx].h){ ok=false; break; } } if(ok) sh = m15[idx].h; }
+    if(!sl){ let ok = true; for(let j=1;j<=kk;j++){ if(m15[idx-j].l <= m15[idx].l || m15[idx+j].l <= m15[idx].l){ ok=false; break; } } if(ok) sl = m15[idx].l; }
+  }
+  const c = m15[last].c;
+  if(sh && c > sh) return 1;
+  if(sl && c < sl) return -1;
+  return 0;
+}
+
+// ---------- render ----------
+function render(R, P){
+  document.getElementById('tiles').hidden = false;
+  document.getElementById('chartcard').hidden = false;
+  document.getElementById('metricscard').hidden = false;
+  document.getElementById('tradescard').hidden = false;
+  document.getElementById('expJson').disabled = false;
+  document.getElementById('expCsv').disabled = false;
+
+  const setTile = (id, txt, cls) => { const el = document.getElementById(id); el.textContent = txt; el.className = 'v' + (cls?' '+cls:''); };
+  setTile('tPnl', (R.pnl>=0?'+':'') + fmt(R.pnl), R.pnl>=0?'pos':'neg');
+  document.getElementById('tRet').textContent = 'Retorno ' + (R.ret>=0?'+':'') + fmt(R.ret) + '%';
+  setTile('tWr', fmt(R.wr) + '%');
+  document.getElementById('tWl').textContent = R.wins + ' ganadas / ' + R.losses + ' perdidas';
+  setTile('tTrades', R.n.toLocaleString('es'));
+  document.getElementById('tByModel').textContent = 'M1: ' + R.byModel.m1 + ' · M2: ' + R.byModel.m2;
+  setTile('tDd', fmt(R.maxDD), R.maxDD > P.initBal*0.5 ? 'neg' : '');
+  document.getElementById('tMinBal').textContent = 'Balance mínimo ' + fmt(R.minBal);
+  setTile('tBal', fmt(R.bal));
+  document.getElementById('tMaxLot').textContent = 'Lote máximo ' + fmt(R.maxLotUsed);
+
+  const rows = [
+    ['Trades', R.n], ['Ganadas', R.wins], ['Perdidas', R.losses],
+    ['Win rate', fmt(R.wr)+'%'],
+    ['Gross profit', '+'+fmt(R.gp)], ['Gross loss', fmt(R.gl)],
+    ['PnL neto', (R.pnl>=0?'+':'')+fmt(R.pnl)],
+    ['Balance final', fmt(R.bal)], ['Retorno', (R.ret>=0?'+':'')+fmt(R.ret)+'%'],
+    ['Balance mínimo realizado', fmt(R.minBal)],
+    ['Max drawdown realizado', fmt(R.maxDD)],
+    ['Lote máximo', fmt(R.maxLotUsed)],
+    ['Salidas por trailing', R.exTrail], ['Salidas por SL', R.exSL],
+    ['Salidas por TP', R.exTP],
+    ['Posiciones aún abiertas al final', R.open],
+    ['Tiempo de cálculo', fmt(R.ms,0)+' ms']
+  ];
+  document.getElementById('metrics').innerHTML =
+    '<tbody>' + rows.map(r => '<tr><td>'+r[0]+'</td><td>'+r[1]+'</td></tr>').join('') + '</tbody>';
+
+  const MAXROWS = 300;
+  const shown = R.trades.slice(-MAXROWS);
+  document.getElementById('tradestable').innerHTML =
+    '<thead><tr><th>#</th><th>Modelo</th><th>Dir</th><th>Entrada</th><th>Precio in</th><th>Precio out</th><th>Lote</th><th>Motivo</th><th>PnL</th></tr></thead><tbody>' +
+    shown.map((t,idx) =>
+      '<tr><td>'+(R.trades.length-shown.length+idx+1)+'</td>' +
+      '<td><span class="chip">M'+t.model+'</span></td>' +
+      '<td>'+(t.dir>0?'LONG':'SHORT')+'</td>' +
+      '<td>'+fmtDate(t.tIn)+'</td>' +
+      '<td>'+fmt(t.entry)+'</td><td>'+fmt(t.exit)+'</td>' +
+      '<td>'+fmt(t.lot)+'</td><td>'+t.reason+'</td>' +
+      '<td class="'+(t.pnl>=0?'pos':'neg')+'">'+(t.pnl>=0?'+':'')+fmt(t.pnl)+'</td></tr>'
+    ).join('') + '</tbody>';
+  document.getElementById('tradesnote').textContent = R.trades.length > MAXROWS
+    ? 'Mostrando las últimas ' + MAXROWS + ' de ' + R.trades.length.toLocaleString('es') + ' operaciones. El CSV exportado incluye todas.'
+    : R.trades.length + ' operaciones.';
+
+  drawChart(R.equity, P.initBal);
+}
+
+// ---------- chart (una serie: sin leyenda; hover con crosshair) ----------
+function drawChart(eq, initBal){
+  const svg = document.getElementById('chart');
+  const W = Math.round(svg.getBoundingClientRect().width) || 800, H = 260, padL = 56, padR = 16, padT = 12, padB = 24;
+  svg.setAttribute('viewBox', '0 0 '+W+' '+H);
+  const xs = eq.map(p=>p.t), ys = eq.map(p=>p.bal);
+  const x0 = xs[0], x1 = xs[xs.length-1] || x0+1;
+  let yMin = Math.min(...ys, initBal), yMax = Math.max(...ys, initBal);
+  const yPad = (yMax-yMin)*0.08 || 1; yMin -= yPad; yMax += yPad;
+  const X = t => padL + (t-x0)/(x1-x0||1)*(W-padL-padR);
+  const Y = v => padT + (yMax-v)/(yMax-yMin)*(H-padT-padB);
+  const css = getComputedStyle(document.documentElement);
+  const col = v => css.getPropertyValue(v).trim();
+
+  let g = '';
+  // grid horizontal (4 lineas) + etiquetas
+  for(let i=0;i<=4;i++){
+    const v = yMin + (yMax-yMin)*i/4, y = Y(v);
+    g += '<line x1="'+padL+'" y1="'+y+'" x2="'+(W-padR)+'" y2="'+y+'" stroke="'+col('--grid')+'" stroke-width="1"/>';
+    g += '<text x="'+(padL-8)+'" y="'+(y+4)+'" text-anchor="end" font-size="11" fill="'+col('--muted')+'" style="font-variant-numeric:tabular-nums">'+Math.round(v).toLocaleString('es')+'</text>';
+  }
+  // eje X: 4 marcas de tiempo
+  for(let i=0;i<=3;i++){
+    const t = x0 + (x1-x0)*i/3;
+    g += '<text x="'+X(t)+'" y="'+(H-6)+'" text-anchor="middle" font-size="11" fill="'+col('--muted')+'">'+new Date(t).toISOString().slice(5,10)+'</text>';
+  }
+  // linea de balance inicial
+  g += '<line x1="'+padL+'" y1="'+Y(initBal)+'" x2="'+(W-padR)+'" y2="'+Y(initBal)+'" stroke="'+col('--baseline')+'" stroke-width="1" stroke-dasharray="4 4"/>';
+  // area + linea
+  const pts = eq.map(p => X(p.t).toFixed(1)+','+Y(p.bal).toFixed(1)).join(' ');
+  g += '<polygon points="'+X(x0)+','+Y(yMin)+' '+pts+' '+X(x1)+','+Y(yMin)+'" fill="'+col('--accent')+'" opacity="0.08"/>';
+  g += '<polyline points="'+pts+'" fill="none" stroke="'+col('--accent')+'" stroke-width="2" stroke-linejoin="round"/>';
+  // punto final enfatizado
+  const lastP = eq[eq.length-1];
+  g += '<circle cx="'+X(lastP.t)+'" cy="'+Y(lastP.bal)+'" r="4" fill="'+col('--accent')+'" stroke="'+col('--surface')+'" stroke-width="2"/>';
+  // minimo marcado
+  const minP = eq.reduce((a,b)=> b.bal<a.bal?b:a, eq[0]);
+  g += '<circle cx="'+X(minP.t)+'" cy="'+Y(minP.bal)+'" r="4" fill="'+col('--crit')+'" stroke="'+col('--surface')+'" stroke-width="2"/>';
+  // crosshair (se mueve con el raton)
+  g += '<line id="xh" x1="0" y1="'+padT+'" x2="0" y2="'+(H-padB)+'" stroke="'+col('--baseline')+'" stroke-width="1" visibility="hidden"/>';
+  g += '<circle id="xhdot" r="4" fill="'+col('--accent')+'" stroke="'+col('--surface')+'" stroke-width="2" visibility="hidden"/>';
+  svg.innerHTML = g;
+
+  const tip = document.getElementById('tooltip');
+  const xh = svg.querySelector('#xh'), xhdot = svg.querySelector('#xhdot');
+  svg.onmousemove = (ev) => {
+    const r = svg.getBoundingClientRect();
+    const mx = (ev.clientX - r.left) * (W / r.width);
+    // punto mas cercano
+    let lo=0, hi=eq.length-1;
+    while(hi-lo>1){ const m=(lo+hi)>>1; (X(eq[m].t)<mx)?lo=m:hi=m; }
+    const p = (Math.abs(X(eq[lo].t)-mx) < Math.abs(X(eq[hi].t)-mx)) ? eq[lo] : eq[hi];
+    const px = X(p.t), py = Y(p.bal);
+    xh.setAttribute('x1',px); xh.setAttribute('x2',px); xh.setAttribute('visibility','visible');
+    xhdot.setAttribute('cx',px); xhdot.setAttribute('cy',py); xhdot.setAttribute('visibility','visible');
+    tip.style.display = 'block';
+    tip.style.left = Math.min(px/W*100, 78) + '%';
+    tip.style.top = (py/H*100) + '%';
+    tip.innerHTML = fmtDate(p.t) + '<br><span class="tv">' + fmt(p.bal) + ' $</span>';
+  };
+  svg.onmouseleave = () => { tip.style.display='none'; xh.setAttribute('visibility','hidden'); xhdot.setAttribute('visibility','hidden'); };
+}
+
+// ---------- export ----------
+function download(name, text, mime){
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([text], {type:mime}));
+  a.download = name; a.click(); URL.revokeObjectURL(a.href);
+}
+function exportJson(){
+  if(!LAST) return;
+  const {R,P} = LAST;
+  const out = {config:P, summary:{trades:R.n, ganadas:R.wins, perdidas:R.losses, win_rate:R.wr,
+    gross_profit:R.gp, gross_loss:R.gl, pnl_neto:R.pnl, balance_final:R.bal, retorno_pct:R.ret,
+    balance_minimo_realizado:R.minBal, max_drawdown_realizado:R.maxDD, lote_maximo:R.maxLotUsed,
+    salidas_trailing:R.exTrail, salidas_sl:R.exSL, salidas_tp:R.exTP, abiertas_final:R.open,
+    por_modelo:R.byModel}};
+  download('ifvg_backtest_summary.json', JSON.stringify(out,null,2), 'application/json');
+}
+function exportTradesCsv(){
+  if(!LAST) return;
+  const rows = ['modelo,dir,entrada,salida,precio_in,precio_out,lote,motivo,pnl'];
+  for(const t of LAST.R.trades)
+    rows.push('M'+t.model+','+(t.dir>0?'LONG':'SHORT')+','+fmtDate(t.tIn)+','+fmtDate(t.tOut)+','+t.entry.toFixed(2)+','+t.exit.toFixed(2)+','+t.lot.toFixed(2)+','+t.reason+','+t.pnl.toFixed(2));
+  download('ifvg_backtest_trades.csv', rows.join('\n'), 'text/csv');
+}
+</script>
+</body>
+</html>
