@@ -1,0 +1,554 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HFT Scalper Lab</title>
+<style>
+  :root, :root[data-theme="light"] {
+    --page:#f9f9f7; --surface:#fcfcfb; --ink:#0b0b0b; --ink2:#52514e; --muted:#898781;
+    --grid:#e1e0d9; --baseline:#c3c2b7; --border:rgba(11,11,11,.10);
+    --accent:#2a78d6; --accent-soft:rgba(42,120,214,.10);
+    --good:#006300; --good-mark:#0ca30c; --crit:#d03b3b;
+    --field:#ffffff;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --page:#0d0d0d; --surface:#1a1a19; --ink:#ffffff; --ink2:#c3c2b7; --muted:#898781;
+      --grid:#2c2c2a; --baseline:#383835; --border:rgba(255,255,255,.10);
+      --accent:#3987e5; --accent-soft:rgba(57,135,229,.14);
+      --good:#0ca30c; --good-mark:#0ca30c; --crit:#e66767;
+      --field:#232322;
+    }
+  }
+  :root[data-theme="dark"] {
+    --page:#0d0d0d; --surface:#1a1a19; --ink:#ffffff; --ink2:#c3c2b7; --muted:#898781;
+    --grid:#2c2c2a; --baseline:#383835; --border:rgba(255,255,255,.10);
+    --accent:#3987e5; --accent-soft:rgba(57,135,229,.14);
+    --good:#0ca30c; --good-mark:#0ca30c; --crit:#e66767;
+    --field:#232322;
+  }
+  * { box-sizing:border-box; }
+  body {
+    margin:0; background:var(--page); color:var(--ink);
+    font:14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  .app { display:grid; grid-template-columns:300px 1fr; gap:20px; max-width:1280px; margin:0 auto; padding:20px; }
+  @media (max-width: 900px){ .app { grid-template-columns:1fr; } .panel { position:static; max-height:none; } }
+
+  .panel {
+    background:var(--surface); border:1px solid var(--border); border-radius:8px;
+    padding:16px; align-self:start; position:sticky; top:16px;
+    max-height:calc(100vh - 32px); overflow-y:auto;
+  }
+  .panel h2 { font-size:13px; margin:18px 0 8px; text-transform:uppercase; letter-spacing:.08em; color:var(--ink2); font-weight:600; }
+  .panel h2:first-child { margin-top:0; }
+  .row { display:flex; align-items:center; justify-content:space-between; gap:8px; margin:6px 0; }
+  .row label { color:var(--ink2); flex:1; font-size:13px; }
+  .row input[type="number"], .row input[type="text"], .row select {
+    width:92px; padding:4px 6px; border:1px solid var(--baseline); border-radius:4px;
+    background:var(--field); color:var(--ink); font:inherit; font-variant-numeric:tabular-nums; text-align:right;
+  }
+  .row select { text-align:left; }
+  .row input[type="checkbox"] { width:16px; height:16px; accent-color:var(--accent); }
+  input:focus-visible, select:focus-visible, button:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
+  .presets { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:4px; }
+  .presets button {
+    font-size:12px; padding:4px 10px; border-radius:99px; border:1px solid var(--baseline);
+    background:var(--surface); color:var(--ink2); cursor:pointer;
+  }
+  .presets button:hover { border-color:var(--accent); color:var(--accent); }
+
+  header { grid-column:1 / -1; display:flex; align-items:baseline; gap:14px; flex-wrap:wrap; }
+  header h1 { font-size:20px; margin:0; font-weight:700; letter-spacing:-.01em; }
+  header .sub { color:var(--muted); font-size:13px; }
+  .actions { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:14px; }
+  .btn {
+    padding:8px 16px; border-radius:6px; border:1px solid var(--baseline);
+    background:var(--surface); color:var(--ink); font:inherit; cursor:pointer;
+  }
+  .btn:hover { border-color:var(--accent); }
+  .btn.primary { background:var(--accent); border-color:var(--accent); color:#fff; font-weight:600; }
+  .btn.primary:hover { filter:brightness(1.08); }
+  .datastate { font-size:13px; color:var(--muted); }
+  .datastate strong { color:var(--ink2); }
+
+  .tiles { display:grid; grid-template-columns:repeat(auto-fit, minmax(150px,1fr)); gap:12px; margin-bottom:16px; }
+  .tile { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:12px 14px; }
+  .tile .k { font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); }
+  .tile .v { font-size:24px; font-weight:700; margin-top:2px; letter-spacing:-.01em; }
+  .tile .v.pos { color:var(--good); }
+  .tile .v.neg { color:var(--crit); }
+  .tile .s { font-size:12px; color:var(--ink2); }
+
+  .card { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:14px; margin-bottom:16px; }
+  .card h3 { margin:0 0 10px; font-size:13px; text-transform:uppercase; letter-spacing:.08em; color:var(--ink2); font-weight:600; }
+  #chartwrap { position:relative; }
+  #tooltip {
+    position:absolute; pointer-events:none; display:none; z-index:2;
+    background:var(--surface); border:1px solid var(--baseline); border-radius:6px;
+    padding:6px 10px; font-size:12px; box-shadow:0 2px 8px rgba(0,0,0,.15);
+    font-variant-numeric:tabular-nums; white-space:nowrap;
+  }
+  #tooltip .tv { font-weight:700; }
+
+  .tscroll { overflow-x:auto; max-height:420px; overflow-y:auto; }
+  table { border-collapse:collapse; width:100%; font-variant-numeric:tabular-nums; font-size:13px; }
+  th { text-align:right; font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted);
+       font-weight:600; padding:6px 10px; border-bottom:1px solid var(--baseline); position:sticky; top:0; background:var(--surface); }
+  th:first-child, td:first-child { text-align:left; }
+  td { padding:5px 10px; border-bottom:1px solid var(--grid); text-align:right; color:var(--ink2); }
+  td.pos { color:var(--good); } td.neg { color:var(--crit); }
+  td .chip { display:inline-block; padding:1px 8px; border-radius:99px; font-size:11px; border:1px solid var(--baseline); color:var(--ink2); }
+  .note { font-size:12px; color:var(--muted); margin-top:8px; }
+  @media (prefers-reduced-motion: reduce){ * { transition:none !important; } }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <header>
+    <h1>HFT Scalper Lab</h1>
+    <span class="sub">Backtest en navegador del motor de <code>HFT_Scalper_EA.mq5</code> &mdash; XAUUSD y BTCUSD (Axi)</span>
+  </header>
+
+  <aside class="panel">
+    <h2>Preset de s&iacute;mbolo</h2>
+    <div class="presets">
+      <button type="button" onclick="applyPreset('xau')">XAUUSD Axi</button>
+      <button type="button" onclick="applyPreset('btc')">BTCUSD Axi</button>
+    </div>
+    <div class="row"><label for="contractSize">Tama&ntilde;o de contrato (uds/lote)</label><input id="contractSize" type="number" value="1" step="1"></div>
+    <div class="row"><label for="spread">Spread medio (precio)</label><input id="spread" type="number" value="20" step="0.01"></div>
+    <div class="row"><label for="minLot">Lote m&iacute;nimo</label><input id="minLot" type="number" value="0.01" step="0.01"></div>
+    <div class="row"><label for="lotStep">Paso de lote</label><input id="lotStep" type="number" value="0.01" step="0.01"></div>
+
+    <h2>Se&ntilde;al (momentum M1)</h2>
+    <div class="row"><label for="emaFast">EMA r&aacute;pida</label><input id="emaFast" type="number" value="5" step="1"></div>
+    <div class="row"><label for="emaSlow">EMA lenta</label><input id="emaSlow" type="number" value="20" step="1"></div>
+    <div class="row"><label for="atrPeriod">Periodo ATR</label><input id="atrPeriod" type="number" value="14" step="1"></div>
+    <div class="row"><label for="momFactor">Factor momentum (cuerpo)</label><input id="momFactor" type="number" value="1.5" step="0.1"></div>
+    <div class="row"><label for="avgBodyBars">Barras cuerpo medio</label><input id="avgBodyBars" type="number" value="20" step="1"></div>
+    <div class="row"><label for="cooldown">Cooldown (barras)</label><input id="cooldown" type="number" value="3" step="1"></div>
+    <div class="row"><label for="maxSpreadFrac">Spread m&aacute;x (fracc. ATR)</label><input id="maxSpreadFrac" type="number" value="0.15" step="0.01"></div>
+
+    <h2>Riesgo</h2>
+    <div class="row"><label for="balance">Balance inicial</label><input id="balance" type="number" value="16" step="1"></div>
+    <div class="row"><label for="riskPct">Riesgo por operaci&oacute;n (%)</label><input id="riskPct" type="number" value="0.5" step="0.1"></div>
+    <div class="row"><label for="maxLot">Lote m&aacute;ximo</label><input id="maxLot" type="number" value="1.0" step="0.01"></div>
+    <div class="row"><label for="dailyLossPct">Corte diario (%)</label><input id="dailyLossPct" type="number" value="3" step="0.5"></div>
+    <div class="row"><label for="maxTradesDay">M&aacute;x trades/d&iacute;a</label><input id="maxTradesDay" type="number" value="30" step="1"></div>
+
+    <h2>Salida</h2>
+    <div class="row"><label for="exitStyle">Estilo</label>
+      <select id="exitStyle"><option value="trail">BE + trailing ATR</option><option value="tp">TP fijo ATR</option></select></div>
+    <div class="row"><label for="slMult">SL (x ATR)</label><input id="slMult" type="number" value="1.2" step="0.1"></div>
+    <div class="row"><label for="tpMult">TP (x ATR, si fijo)</label><input id="tpMult" type="number" value="1.8" step="0.1"></div>
+    <div class="row"><label for="beMult">Breakeven (x ATR)</label><input id="beMult" type="number" value="0.6" step="0.1"></div>
+    <div class="row"><label for="trailMult">Trailing (x ATR)</label><input id="trailMult" type="number" value="0.8" step="0.1"></div>
+
+    <h2>Sesi&oacute;n (opcional)</h2>
+    <div class="row"><label for="useSession">Filtrar por horario</label><input id="useSession" type="checkbox"></div>
+    <div class="row"><label for="sessStart">Inicio</label><input id="sessStart" type="text" value="07:00"></div>
+    <div class="row"><label for="sessEnd">Fin</label><input id="sessEnd" type="text" value="21:00"></div>
+  </aside>
+
+  <main>
+    <div class="actions">
+      <button class="btn primary" type="button" onclick="run()">&#9654; Ejecutar backtest</button>
+      <label class="btn" for="csvfile" style="margin:0">Cargar CSV M1&hellip;</label>
+      <input id="csvfile" type="file" accept=".csv,.txt" style="display:none" onchange="loadCsv(this.files[0])">
+      <button class="btn" type="button" onclick="genDemo('btc')">Demo BTC (30 d&iacute;as)</button>
+      <button class="btn" type="button" onclick="genDemo('xau')">Demo XAU (30 d&iacute;as)</button>
+      <button class="btn" type="button" onclick="exportTrades()">Exportar trades CSV</button>
+    </div>
+    <div class="actions"><span class="datastate" id="datastate">Sin datos &mdash; carga un CSV M1 exportado de MT5 o genera datos demo.</span></div>
+
+    <div class="tiles" id="tiles"></div>
+
+    <div class="card">
+      <h3>Curva de equity</h3>
+      <div id="chartwrap">
+        <canvas id="chart" height="280" style="width:100%"></canvas>
+        <div id="tooltip"></div>
+      </div>
+      <div class="note">Ejecuci&oacute;n por barra M1: se&ntilde;al al cierre, entrada al open de la barra siguiente con spread. SL evaluado contra high/low intrabarra (SL tiene prioridad si SL y TP caen en la misma barra: resultado conservador).</div>
+    </div>
+
+    <div class="card">
+      <h3>Operaciones</h3>
+      <div class="tscroll"><table id="trades"><thead><tr>
+        <th>Entrada</th><th>Dir</th><th>Lote</th><th>Precio in</th><th>Precio out</th><th>Salida</th><th>Motivo</th><th>PnL</th><th>Equity</th>
+      </tr></thead><tbody></tbody></table></div>
+    </div>
+  </main>
+</div>
+
+<script>
+'use strict';
+let BARS = null;
+let LASTRUN = null;
+
+// ---------- presets (especificacion Axi) ----------
+const PRESETS = {
+  btc: { contractSize:1,   spread:20,   minLot:0.01, lotStep:0.01 },
+  xau: { contractSize:100, spread:0.30, minLot:0.01, lotStep:0.01 }
+};
+function applyPreset(k){
+  const p = PRESETS[k];
+  for(const key in p) document.getElementById(key).value = p[key];
+  dataState('Preset <strong>' + (k==='btc'?'BTCUSD':'XAUUSD') + ' Axi</strong> aplicado (contrato, spread, lotes). Recuerda cargar datos del mismo s&iacute;mbolo.');
+}
+
+// ---------- datos ----------
+function loadCsv(file){
+  if(!file) return;
+  const r = new FileReader();
+  r.onload = () => {
+    try {
+      BARS = parseCsv(r.result);
+      dataState('CSV cargado: <strong>' + BARS.length.toLocaleString('es') + '</strong> velas M1 (' +
+        fmtDate(BARS[0].t) + ' &rarr; ' + fmtDate(BARS[BARS.length-1].t) + ')');
+    } catch(e){ dataState('Error al leer el CSV: ' + e.message); BARS = null; }
+  };
+  r.readAsText(file);
+}
+function parseCsv(text){
+  const lines = text.split(/\r?\n/).filter(l => l.trim().length);
+  if(!lines.length) throw new Error('archivo vacio');
+  const sep = lines[0].includes('\t') ? '\t' : (lines[0].includes(';') ? ';' : ',');
+  let start = 0;
+  if(/[a-zA-Z<]/.test(lines[0])) start = 1; // cabecera
+  const out = [];
+  for(let i=start;i<lines.length;i++){
+    const p = lines[i].split(sep).map(s => s.trim());
+    if(p.length < 5) continue;
+    let oIdx;
+    let dateStr, timeStr;
+    if(p[0].includes(' ') && p[0].includes(':')){ const dt = p[0].split(' '); dateStr = dt[0]; timeStr = dt[1]; oIdx = 1; }
+    else { dateStr = p[0]; timeStr = p[1].includes(':') ? p[1] : '00:00'; oIdx = p[1].includes(':') ? 2 : 1; }
+    const d = dateStr.replace(/\./g,'-').split('-');
+    const tm = timeStr.split(':');
+    if(d.length < 3) continue;
+    let y,mo,da;
+    if(d[0].length === 4){ y=+d[0]; mo=+d[1]; da=+d[2]; } else { da=+d[0]; mo=+d[1]; y=+d[2]; }
+    const t = Date.UTC(y, mo-1, da, +tm[0]||0, +tm[1]||0);
+    const o = parseFloat(p[oIdx]), h = parseFloat(p[oIdx+1]), l = parseFloat(p[oIdx+2]), c = parseFloat(p[oIdx+3]);
+    if([o,h,l,c].some(isNaN) || !isFinite(t)) continue;
+    out.push({t,o,h,l,c});
+  }
+  if(out.length < 500) throw new Error('menos de 500 velas validas');
+  out.sort((a,b) => a.t - b.t);
+  return out;
+}
+function genDemo(kind){
+  const rng = mulberry32(kind === 'xau' ? 20260711 : 20260710);
+  const gauss = () => { let u=0,v=0; while(!u)u=rng(); while(!v)v=rng(); return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v); };
+  const n = 43200; // 30 dias M1
+  const t0 = Date.UTC(2026,5,8);
+  let price = kind === 'xau' ? 3300 : 100000;
+  let vol = kind === 'xau' ? 0.00025 : 0.0006;
+  const volMin = vol/3, volMax = vol*3;
+  const out = [];
+  for(let i=0;i<n;i++){
+    vol = Math.max(volMin, Math.min(volMax, vol + gauss()*vol*0.07));
+    const o = price;
+    const ret = gauss()*vol;
+    let c = o*(1+ret);
+    const h = Math.max(o,c)*(1+Math.abs(gauss())*vol*0.6);
+    const l = Math.min(o,c)*(1-Math.abs(gauss())*vol*0.6);
+    out.push({t:t0+i*60000, o, h, l, c});
+    price = c;
+  }
+  BARS = out;
+  applyPreset(kind);
+  dataState('Datos demo <strong>' + (kind==='xau'?'XAU':'BTC') + '-like</strong>: ' + n.toLocaleString('es') +
+    ' velas M1 sint&eacute;ticas (paseo aleatorio). Solo para probar el flujo, no para validar el modelo.');
+}
+function mulberry32(a){ return function(){ a|=0; a=a+0x6D2B79F5|0; let t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
+function dataState(html){ document.getElementById('datastate').innerHTML = html; }
+function fmtDate(ms){ const d = new Date(ms); return d.toISOString().slice(0,16).replace('T',' '); }
+function fmt(x,dec){ return x.toLocaleString('es',{minimumFractionDigits:dec===undefined?2:dec, maximumFractionDigits:dec===undefined?2:dec}); }
+function num(id){ return parseFloat(document.getElementById(id).value); }
+function parseHHMM(s){ const p = String(s).split(':'); if(p.length!==2) return -1; return (+p[0])*60 + (+p[1]); }
+
+// ---------- indicadores ----------
+function emaSeries(bars, period){
+  const k = 2/(period+1), out = new Float64Array(bars.length);
+  let e = bars[0].c;
+  for(let i=0;i<bars.length;i++){ e = bars[i].c*k + e*(1-k); out[i] = e; }
+  return out;
+}
+function atrSeries(bars, period){
+  const out = new Float64Array(bars.length);
+  let atr = 0;
+  for(let i=0;i<bars.length;i++){
+    const tr = i===0 ? bars[i].h-bars[i].l
+      : Math.max(bars[i].h-bars[i].l, Math.abs(bars[i].h-bars[i-1].c), Math.abs(bars[i].l-bars[i-1].c));
+    atr = i < period ? (atr*i + tr)/(i+1) : (atr*(period-1) + tr)/period; // Wilder
+    out[i] = atr;
+  }
+  return out;
+}
+
+// ---------- motor (replica del EA) ----------
+function run(){
+  if(!BARS){ dataState('<strong>Primero carga datos</strong> (CSV M1 o demo).'); return; }
+  const P = {
+    contractSize: num('contractSize'), spread: num('spread'),
+    minLot: num('minLot'), lotStep: num('lotStep'),
+    emaFast: num('emaFast')|0, emaSlow: num('emaSlow')|0, atrPeriod: num('atrPeriod')|0,
+    momFactor: num('momFactor'), avgBodyBars: num('avgBodyBars')|0, cooldown: num('cooldown')|0,
+    maxSpreadFrac: num('maxSpreadFrac'),
+    balance: num('balance'), riskPct: num('riskPct'), maxLot: num('maxLot'),
+    dailyLossPct: num('dailyLossPct'), maxTradesDay: num('maxTradesDay')|0,
+    exitStyle: document.getElementById('exitStyle').value,
+    slMult: num('slMult'), tpMult: num('tpMult'), beMult: num('beMult'), trailMult: num('trailMult'),
+    useSession: document.getElementById('useSession').checked,
+    sessStart: parseHHMM(document.getElementById('sessStart').value),
+    sessEnd: parseHHMM(document.getElementById('sessEnd').value)
+  };
+  const t0 = performance.now();
+
+  const emaF = emaSeries(BARS, P.emaFast);
+  const emaS = emaSeries(BARS, P.emaSlow);
+  const atr  = atrSeries(BARS, P.atrPeriod);
+
+  let balance = P.balance;
+  let burnedAt = null;
+  let pos = null;           // {dir, lot, entry, sl, tp, be, entryT, entryIdx}
+  let lastEntryIdx = -1e9;
+  let day = -1, tradesToday = 0, dayStartBal = balance, dailyLocked = false;
+  const trades = [], equity = [{t:BARS[0].t, v:balance}];
+
+  const warmup = Math.max(P.emaSlow, P.atrPeriod, P.avgBodyBars) + 2;
+
+  for(let i=warmup; i<BARS.length; i++){
+    const b = BARS[i];
+
+    // dia nuevo
+    const d = new Date(b.t); const dayKey = d.getUTCFullYear()*1000 + Math.floor((b.t - Date.UTC(d.getUTCFullYear(),0,1)) / 86400000);
+    if(dayKey !== day){ day = dayKey; tradesToday = 0; dayStartBal = balance; dailyLocked = false; }
+
+    // ---- gestion de la posicion abierta (intrabarra) ----
+    if(pos){
+      const closed = manageBar(pos, b, atr[i-1], P);
+      if(closed){
+        const pnl = (closed.exit - pos.entry) * (pos.dir>0?1:-1) * pos.lot * P.contractSize;
+        balance += pnl;
+        trades.push({inT:pos.entryT, dir:pos.dir, lot:pos.lot, entry:pos.entry,
+                     exit:closed.exit, outT:b.t, reason:closed.reason, pnl, eq:balance});
+        equity.push({t:b.t, v:balance});
+        pos = null;
+        if(balance <= dayStartBal * (1 - P.dailyLossPct/100)) dailyLocked = true;
+        if(balance <= 0){ burnedAt = b.t; break; }
+      }
+    }
+
+    // ---- senal en la barra cerrada i-1, entrada al open de la barra i ----
+    if(pos || dailyLocked || tradesToday >= P.maxTradesDay) continue;
+    if(i - lastEntryIdx < P.cooldown) continue;
+    const a = atr[i-1];
+    if(a <= 0 || P.spread > P.maxSpreadFrac * a) continue;
+    if(P.useSession){
+      const mins = new Date(b.t).getUTCHours()*60 + new Date(b.t).getUTCMinutes();
+      if(P.sessStart >= 0 && P.sessEnd >= 0 && (mins < P.sessStart || mins > P.sessEnd)) continue;
+    }
+
+    const s = BARS[i-1]; // barra de senal
+    const body = Math.abs(s.c - s.o);
+    let sum = 0;
+    for(let j=i-1-P.avgBodyBars; j<i-1; j++) sum += Math.abs(BARS[j].c - BARS[j].o);
+    const avgBody = sum / P.avgBodyBars;
+    if(avgBody <= 0 || body < P.momFactor * avgBody) continue;
+
+    const up = emaF[i-1] > emaS[i-1], down = emaF[i-1] < emaS[i-1];
+    let dir = 0;
+    if(up && s.c > s.o && s.c > emaF[i-1]) dir = 1;
+    else if(down && s.c < s.o && s.c < emaF[i-1]) dir = -1;
+    if(!dir) continue;
+
+    // lote por riesgo %
+    const slDist = P.slMult * a;
+    const lossPerLot = slDist * P.contractSize;
+    if(lossPerLot <= 0) continue;
+    let lot = balance * P.riskPct/100 / lossPerLot;
+    lot = Math.floor(lot / P.lotStep) * P.lotStep;
+    if(lot < P.minLot) lot = P.minLot; // fallback igual que el EA (avisa por consola alli)
+    lot = Math.min(lot, P.maxLot);
+    lot = Math.round(lot*100)/100;
+
+    const entry = dir > 0 ? b.o + P.spread : b.o; // BUY paga ask, SELL vende a bid
+    pos = {
+      dir, lot, entry,
+      sl: dir > 0 ? entry - slDist : entry + slDist,
+      tp: P.exitStyle === 'tp' ? (dir > 0 ? entry + P.tpMult*a : entry - P.tpMult*a) : null,
+      beDone: false, entryT: b.t, entryIdx: i
+    };
+    lastEntryIdx = i;
+    tradesToday++;
+  }
+
+  // cerrar posicion final al ultimo close
+  if(pos){
+    const last = BARS[BARS.length-1];
+    const exit = pos.dir > 0 ? last.c : last.c + P.spread;
+    const pnl = (exit - pos.entry) * (pos.dir>0?1:-1) * pos.lot * P.contractSize;
+    balance += pnl;
+    trades.push({inT:pos.entryT, dir:pos.dir, lot:pos.lot, entry:pos.entry,
+                 exit, outT:last.t, reason:'fin datos', pnl, eq:balance});
+    equity.push({t:last.t, v:balance});
+  }
+
+  const ms = performance.now() - t0;
+  LASTRUN = {trades, equity, P};
+  render(trades, equity, P, ms, burnedAt);
+}
+
+// gestion intrabarra de una posicion: devuelve {exit, reason} o null.
+// bid = precio de barra; ask = precio + spread. BUY sale a bid, SELL sale a ask.
+function manageBar(pos, b, atrPrev, P){
+  const sp = P.spread;
+  if(pos.dir > 0){
+    // SL primero (conservador)
+    if(b.l <= pos.sl) return {exit: pos.sl, reason: pos.beDone ? 'trail/BE' : 'SL'};
+    if(pos.tp !== null && b.h >= pos.tp) return {exit: pos.tp, reason:'TP'};
+    if(P.exitStyle === 'trail'){
+      const profit = b.h - pos.entry; // mejor precio de la barra
+      if(profit >= P.beMult * atrPrev){
+        const newSl = Math.max(pos.entry, b.h - P.trailMult*atrPrev);
+        if(newSl > pos.sl){ pos.sl = newSl; pos.beDone = true; }
+      }
+    }
+  } else {
+    const askH = b.h + sp, askL = b.l + sp;
+    if(askH >= pos.sl) return {exit: pos.sl, reason: pos.beDone ? 'trail/BE' : 'SL'};
+    if(pos.tp !== null && askL <= pos.tp) return {exit: pos.tp, reason:'TP'};
+    if(P.exitStyle === 'trail'){
+      const profit = pos.entry - askL;
+      if(profit >= P.beMult * atrPrev){
+        const newSl = Math.min(pos.entry, askL + P.trailMult*atrPrev);
+        if(newSl < pos.sl){ pos.sl = newSl; pos.beDone = true; }
+      }
+    }
+  }
+  return null;
+}
+
+// ---------- render ----------
+function render(trades, equity, P, ms, burnedAt){
+  const wins = trades.filter(t => t.pnl > 0);
+  const losses = trades.filter(t => t.pnl <= 0);
+  const grossW = wins.reduce((s,t)=>s+t.pnl,0), grossL = Math.abs(losses.reduce((s,t)=>s+t.pnl,0));
+  const pnl = equity[equity.length-1].v - P.balance;
+  let peak = -Infinity, maxDD = 0;
+  for(const e of equity){ peak = Math.max(peak, e.v); maxDD = Math.max(maxDD, peak - e.v); }
+  const tiles = [
+    {k:'PnL neto', v:(pnl>=0?'+':'')+fmt(pnl), cls:pnl>=0?'pos':'neg', s:fmt(pnl/P.balance*100,1)+'% del balance'},
+    {k:'Operaciones', v:trades.length, s:fmt(trades.length ? trades.length/((equity[equity.length-1].t-equity[0].t)/86400000) : 0,1)+' por d&iacute;a'},
+    {k:'Winrate', v:trades.length?fmt(wins.length/trades.length*100,1)+'%':'&mdash;', s:wins.length+'W / '+losses.length+'L'},
+    {k:'Profit factor', v:grossL>0?fmt(grossW/grossL):'&mdash;', s:'bruto +'+fmt(grossW)+' / -'+fmt(grossL)},
+    {k:'Max drawdown', v:fmt(maxDD), cls:maxDD>0?'neg':'', s:fmt(P.balance>0?maxDD/P.balance*100:0,1)+'% del balance inicial'},
+    {k:'Velocidad', v:fmt(ms,0)+' ms', s:BARS.length.toLocaleString('es')+' velas M1'}
+  ];
+  document.getElementById('tiles').innerHTML = tiles.map(t =>
+    '<div class="tile"><div class="k">'+t.k+'</div><div class="v '+(t.cls||'')+'">'+t.v+'</div><div class="s">'+(t.s||'')+'</div></div>').join('');
+
+  drawEquity(equity, P.balance);
+
+  const tb = document.querySelector('#trades tbody');
+  tb.innerHTML = trades.map(t =>
+    '<tr><td>'+fmtDate(t.inT)+'</td>'+
+    '<td><span class="chip">'+(t.dir>0?'BUY':'SELL')+'</span></td>'+
+    '<td>'+fmt(t.lot)+'</td><td>'+fmt(t.entry)+'</td><td>'+fmt(t.exit)+'</td>'+
+    '<td>'+fmtDate(t.outT)+'</td><td>'+t.reason+'</td>'+
+    '<td class="'+(t.pnl>=0?'pos':'neg')+'">'+(t.pnl>=0?'+':'')+fmt(t.pnl)+'</td>'+
+    '<td>'+fmt(t.eq)+'</td></tr>').join('');
+
+  dataState('Backtest completado: <strong>'+trades.length+'</strong> operaciones en '+fmt(ms,0)+' ms.' +
+    (burnedAt ? ' <strong style="color:var(--crit)">CUENTA QUEMADA en '+fmtDate(burnedAt)+' &mdash; backtest detenido ah&iacute;.</strong>' : ''));
+}
+
+let EQPTS = null;
+function drawEquity(equity, startBal){
+  const cv = document.getElementById('chart');
+  const dpr = window.devicePixelRatio || 1;
+  const W = cv.clientWidth, H = 280;
+  cv.width = W*dpr; cv.height = H*dpr;
+  const ctx = cv.getContext('2d');
+  ctx.scale(dpr,dpr); ctx.clearRect(0,0,W,H);
+  const css = getComputedStyle(document.documentElement);
+  const col = n => css.getPropertyValue(n).trim();
+
+  const t0 = equity[0].t, t1 = equity[equity.length-1].t;
+  let lo = Infinity, hi = -Infinity;
+  for(const e of equity){ lo = Math.min(lo,e.v); hi = Math.max(hi,e.v); }
+  if(hi === lo){ hi += 1; lo -= 1; }
+  const pad = {l:56, r:10, t:10, b:22};
+  const x = t => pad.l + (t-t0)/(t1-t0||1)*(W-pad.l-pad.r);
+  const y = v => pad.t + (hi-v)/(hi-lo)*(H-pad.t-pad.b);
+
+  // rejilla
+  ctx.strokeStyle = col('--grid'); ctx.fillStyle = col('--muted');
+  ctx.font = '11px system-ui'; ctx.lineWidth = 1;
+  for(let i=0;i<=4;i++){
+    const v = lo + (hi-lo)*i/4, yy = y(v);
+    ctx.beginPath(); ctx.moveTo(pad.l, yy); ctx.lineTo(W-pad.r, yy); ctx.stroke();
+    ctx.fillText(fmt(v,2), 4, yy+4);
+  }
+  // linea de balance inicial
+  ctx.strokeStyle = col('--baseline'); ctx.setLineDash([4,4]);
+  ctx.beginPath(); ctx.moveTo(pad.l, y(startBal)); ctx.lineTo(W-pad.r, y(startBal)); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // curva
+  ctx.strokeStyle = col('--accent'); ctx.lineWidth = 1.6;
+  ctx.beginPath();
+  EQPTS = [];
+  for(let i=0;i<equity.length;i++){
+    const px = x(equity[i].t), py = y(equity[i].v);
+    EQPTS.push({px, py, t:equity[i].t, v:equity[i].v});
+    if(i===0) ctx.moveTo(px,py); else ctx.lineTo(px,py);
+  }
+  ctx.stroke();
+
+  // fechas
+  ctx.fillStyle = col('--muted');
+  ctx.fillText(fmtDate(t0), pad.l, H-6);
+  const endTxt = fmtDate(t1);
+  ctx.fillText(endTxt, W-pad.r-ctx.measureText(endTxt).width, H-6);
+}
+document.getElementById('chart').addEventListener('mousemove', ev => {
+  if(!EQPTS || !EQPTS.length) return;
+  const rect = ev.target.getBoundingClientRect();
+  const mx = ev.clientX - rect.left;
+  let best = EQPTS[0], bd = Infinity;
+  for(const p of EQPTS){ const d = Math.abs(p.px-mx); if(d<bd){ bd=d; best=p; } }
+  const tt = document.getElementById('tooltip');
+  tt.style.display = 'block';
+  tt.style.left = Math.min(best.px+10, rect.width-140)+'px';
+  tt.style.top = (best.py-34)+'px';
+  tt.innerHTML = fmtDate(best.t)+'<br><span class="tv">'+fmt(best.v)+'</span>';
+});
+document.getElementById('chart').addEventListener('mouseleave', () => {
+  document.getElementById('tooltip').style.display = 'none';
+});
+window.addEventListener('resize', () => { if(LASTRUN) drawEquity(LASTRUN.equity, LASTRUN.P.balance); });
+
+// ---------- export ----------
+function exportTrades(){
+  if(!LASTRUN || !LASTRUN.trades.length){ dataState('Nada que exportar: ejecuta un backtest primero.'); return; }
+  const rows = ['entrada,dir,lote,precio_in,precio_out,salida,motivo,pnl,equity'];
+  for(const t of LASTRUN.trades)
+    rows.push([fmtDate(t.inT), t.dir>0?'BUY':'SELL', t.lot, t.entry.toFixed(2), t.exit.toFixed(2),
+               fmtDate(t.outT), t.reason, t.pnl.toFixed(2), t.eq.toFixed(2)].join(','));
+  const blob = new Blob([rows.join('\n')], {type:'text/csv'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'hft_scalper_trades.csv';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+</script>
+</body>
+</html>

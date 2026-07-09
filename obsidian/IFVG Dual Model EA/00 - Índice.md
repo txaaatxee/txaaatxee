@@ -24,6 +24,7 @@ EA en MQL5 para MetaTrader 5 que opera los **dos modelos únicos de entrada IFVG
 - [[08 - Variante agresiva]] — réplica con min range 125 (más trades, más drawdown)
 - [[09 - Backtest Lab (dashboard HTML)]] — backtests en navegador en milisegundos
 - [[10 - Despliegue en Axi]] — conversión de puntos ×100, presets y checklist live
+- [[11 - HFT Scalper (XAUUSD + BTCUSD)]] — scalper M1 auto-adaptativo por ATR (proyecto aparte)
 
 ## Código
 
