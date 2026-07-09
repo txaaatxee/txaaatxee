@@ -1,0 +1,38 @@
+; IFVG DualModel EA - Preset para Axi BTCUSD (Digitos=2, punto=$0.01)
+; Valores en puntos convertidos x100 respecto al baseline ($1 -> 100 puntos)
+; IMPORTANTE: cambia InpInitialBalance al balance real de tu cuenta
+InpMagic=20260708
+InpModelMode=2
+InpMaxSpreadPoints=3000
+InpMaxOpenPositions=10
+InpM1BiasTF=15
+InpM1EntryTF=5
+InpM1SwingBars=3
+InpM1BiasLookback=40
+InpM1FvgMinPoints=1000
+InpM1ZoneExpiryBars=120
+InpM2TF=1
+InpM2SweepLookback=30
+InpM2SweepWindow=15
+InpM2DispFactor=1.8
+InpM2AvgBodyBars=20
+InpM2FvgMinPoints=500
+InpM2MinRangePoints=17500
+InpM2RangeBars=15
+InpM2ZoneExpiryBars=90
+InpInitialBalance=400.0
+InpBaseLot=0.03
+InpLotStepPer1000=0.10
+InpMaxLot=5.0
+InpStopPoints=15000
+InpMaxOpenLosing=3
+InpMaxOpenRiskPct=50.0
+InpExitMode=0
+InpTrailStartPoints=7500
+InpTrailDistPoints=5000
+InpFixedRR=2.5
+InpUseKillzones=0
+InpKZ1Start=08:00
+InpKZ1End=11:00
+InpKZ2Start=13:30
+InpKZ2End=16:00
