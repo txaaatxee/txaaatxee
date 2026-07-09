@@ -29,8 +29,13 @@ EA de scalping de alta frecuencia en M1. **No comparte lógica con los modelos I
 | Cooldown entre entradas | 3 barras M1 |
 | Spread máximo | 0.15 × ATR (adaptativo) |
 
-> [!note] Cuenta de 16€
-> Con el lote mínimo 0.01 el riesgo real por trade queda MUY por encima del 0.5% (el EA avisa en el log con el % real). En BTCUSD un SL de 1.2×ATR puede ser ~2€ por trade = ~12% del balance. Es lo que hay con una cuenta tan pequeña.
+> [!note] Cuenta de 500€ (referencia)
+> Riesgo 0.5% = **2.50€ por trade** — alcanzable con lote mínimo 0.01 en ambos símbolos, así que el cálculo de lote funciona de verdad (no hay fallback al mínimo).
+> - Corte diario 3% = para de operar tras **−15€** en el día
+> - Máx. teórico diario: 30 trades × 2.50€ = 75€, pero el corte del 3% salta mucho antes
+> - El lote se recalcula sobre el balance real en cada entrada: si la cuenta crece a 600€, el riesgo pasa a 3€/trade automáticamente
+>
+> Con cuentas muy pequeñas (ej. 16€) el lote mínimo fuerza un riesgo real de ~12%/trade en BTCUSD — el EA avisa en el log del % real.
 
 ## Uso en Axi
 

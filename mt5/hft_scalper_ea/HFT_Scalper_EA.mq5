@@ -17,6 +17,11 @@
 //|     cerrando en dirección de la tendencia                        |
 //|   - Gestión en cada tick: breakeven + trailing por ATR           |
 //|                                                                  |
+//| Calibrado para cuentas de ~500 EUR: riesgo 0.5% = 2.50 EUR por   |
+//| operación, alcanzable con lote mínimo 0.01 en XAUUSD y BTCUSD.   |
+//| El lote se recalcula sobre el balance REAL en cada entrada, así  |
+//| que crece/decrece solo con la cuenta.                            |
+//|                                                                  |
 //| Protecciones:                                                    |
 //|   - Riesgo % por operación (lote calculado, no fijo)             |
 //|   - Corte diario de pérdidas (% del balance al inicio del día)   |
