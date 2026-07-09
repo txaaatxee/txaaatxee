@@ -3,10 +3,10 @@
 //|                                                     txatxe.code  |
 //|                                                                  |
 //| VERSION LISTA PARA LIVE EN AXI BTCUSD (Digitos=2, punto=$0.01).  |
-//| Mismos dos modelos de entrada IFVG, con los puntos convertidos   |
-//| x100 ya como valores por defecto:                                |
-//|   SL 15000 (=$150) - trailing 7500/5000 - min range 17500        |
-//|   FVG min 1000 (M5) / 500 (M1) - spread max 3000 (=$30)          |
+//| Modelo 1 únicamente en M1, con los puntos convertidos x100       |
+//| como valores por defecto:                                        |
+//|   SL 15000 (=$150) - trailing 7500/5000                          |
+//|   FVG min 1000 (M1) - spread max 3000 (=$30)                     |
 //|                                                                  |
 //| Protecciones live:                                               |
 //|   - InpInitialBalance=0 -> usa el balance de la cuenta al        |
@@ -36,13 +36,13 @@ enum ENUM_EXIT_MODE
 //--- inputs generales
 input group "=== General ==="
 input long              InpMagic            = 20260708;   // Magic number
-input ENUM_MODEL_MODE   InpModelMode        = MODE_BOTH;  // Modelos activos
+input ENUM_MODEL_MODE   InpModelMode        = MODE_MODEL1; // Modelos activos
 input int               InpMaxSpreadPoints  = 3000;       // Spread maximo (puntos)
 input int               InpMaxOpenPositions = 10;         // Maximo posiciones abiertas del EA
 
-input group "=== Modelo 1 (M15 -> M5 -> IFVG) ==="
-input ENUM_TIMEFRAMES   InpM1BiasTF         = PERIOD_M15; // TF de bias
-input ENUM_TIMEFRAMES   InpM1EntryTF        = PERIOD_M5;  // TF de entrada
+input group "=== Modelo 1 (M1 -> M1 -> IFVG) ==="
+input ENUM_TIMEFRAMES   InpM1BiasTF         = PERIOD_M1;  // TF de bias
+input ENUM_TIMEFRAMES   InpM1EntryTF        = PERIOD_M1;  // TF de entrada
 input int               InpM1SwingBars      = 3;          // Barras a cada lado del swing (fractal)
 input int               InpM1BiasLookback   = 40;         // Barras M15 para buscar estructura
 input int               InpM1FvgMinPoints   = 1000;       // Tamano minimo del FVG (puntos, Axi = $10)
